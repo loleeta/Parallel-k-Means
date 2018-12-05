@@ -1,63 +1,16 @@
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 
-//Class representing the Iris data read in from file
-class IrisData {
-    public double sepialLength;
-    public double sepialWidth;
-    public double petalLength;
-    public double petalWidth;
-    public String irisClass;
-
-    public IrisData(String[] attributes) {
-        this.sepialLength = Double.parseDouble(attributes[0]);
-        this.sepialWidth = Double.parseDouble(attributes[1]);
-        this.petalLength = Double.parseDouble(attributes[2]);
-        this.petalWidth = Double.parseDouble(attributes[3]);
-        if (attributes.length == 5) {
-            this.irisClass = attributes[4];
-        }
-    }
-
-    public IrisData(Double sl, Double sw, Double pl, Double pw) {
-        this.sepialLength = sl;
-        this.sepialWidth = sw;
-        this.petalLength = pl;
-        this.petalWidth = pw;
-    }
-
-    public String toString() {
-        String s = "(";
-        s += this.sepialLength + ", " + this.sepialWidth + ", " +
-                this.petalLength + ", " + this.petalWidth + ",  " +
-                this.irisClass + ")";
-        return s;
-    }
-}
-
-
 public class SequentialKMeans {
-    public static void main(String[] args) {
-        //read data into list
-        String file = "src/iris-data.csv";
-        List<IrisData> data = readFromFile(file);
-
-        //pick three data points to be the centroids
-        List<IrisData> centroids = chooseCentroids(data, 3);
-        System.out.println("Picked three centroids: ");
-        for (IrisData d: centroids) {
-            System.out.println(d);
-        }
-        System.out.println();
-
-        //cluster the data around the centroids and repeat until convergence
-        cluster(data, centroids);
-    }
-
-    // Reads data from file into a list
+    /**
+     * Takes a file name and reads in corresponding CSV data, creates
+     * IrisData object for each line of data, and returns a list of the
+     * IrisData objects.
+     * @param fileName  String for the file name
+     * @return  List of IrisData objects
+     */
     private static List<IrisData> readFromFile(String fileName) {
         BufferedReader br = null;
         String line = "";
@@ -84,7 +37,14 @@ public class SequentialKMeans {
         return dataFromFile;
     }
 
-    // Picks 3 random data points to be the centroids by shuffling list
+    /**
+     * Initial step of the clustering algorithm.
+     * Given a list of IrisData objects, selects three of them randomly by
+     * shuffling a copy of the list and returning the first three in a list.
+     * @param data  List of IrisData objects
+     * @param numCentroids  Number of objects to be picked as centroids
+     * @return  a List of IrisData objects
+     */
     private static List<IrisData> chooseCentroids(List<IrisData> data, int
             numCentroids) {
         List<IrisData> dataCopy = new ArrayList<>(data);
@@ -92,73 +52,68 @@ public class SequentialKMeans {
         return dataCopy.subList(0, numCentroids);
     }
 
-    // Main loop of k-means:
-    // While there is no convergence (convergence is true if new centroids
-    // calculated are the same as old centroids)
-    //     assign data points to clusters
-    //     recompute the centroid
-    private static void cluster(List<IrisData> data, List<IrisData> centroids) {
+    /**
+     * K-means algorithm. While there is no converengce, assign data points
+     * to clusters and recompute centroids.
+     * @param data  List of IrisData objects
+     * @param centroids List of IrisData objects as centroids for clusters
+     * @return HashMap of clusters
+     */
+    private static HashMap<Integer, List<IrisData>> runKMeans(List<IrisData>
+              data, List<IrisData> centroids) {
         boolean convergence = false;
         int iteration = 0;
         HashMap<Integer, List<IrisData>> currentClusters = new HashMap<>();
         while (!convergence) {
-            System.out.println("Iteration: " + ++iteration);
-            System.out.println("Centroids are " + centroids);
+            iteration++;
+            //System.out.println("Iteration: " + ++iteration);
+            //System.out.println("\tCentroids are " + centroids);
 
             // create initial cluster
-            if (currentClusters.isEmpty()) {
-                System.out.println("Creating initial clusters.\n");
-                currentClusters = createClusters(data, centroids);
-            }
+            currentClusters = cluster(data, centroids);
+
 
             //check that no cluster is empty
             //checkClusterPopulation(clusters);
 
             // find the new centroids of each cluster
-            System.out.println("Finding average of each cluster:");
-            List<IrisData> newCentroids = new ArrayList<>();
-            // for every cluster, find the average point
-            for (Map.Entry<Integer, List<IrisData>> entry: currentClusters.entrySet
-                    ()) {
-                Integer i = entry.getKey();
-                List<IrisData> clusterList = entry.getValue();
-                IrisData clusterAvg = getCentroidAverage(clusterList);
-                newCentroids.add(clusterAvg);
-                System.out.println(i + ": " + clusterAvg);
-            }
-            System.out.println();
+            //System.out.println("\tFinding average of each cluster:");
 
-            //checking if clusters converge
-            System.out.println("Checking convergence");
-            System.out.println("Old: " + centroids);
-            System.out.println("New: " + newCentroids + "\n");
+            // for every cluster, find the average point
+            List<IrisData> newCentroids = getNewCentroids(currentClusters);
+
+            //compare new and old centroids for convergence
+            //System.out.println("\tChecking convergence");
+            //System.out.println("\t\tOld: " + centroids);
+            //System.out.println("\t\tNew: " + newCentroids + "\n");
             convergence = checkConvergence(centroids, newCentroids);
+
+            //if converged, clustering is complete
             if (convergence) {
-                System.out.println("Convergence found with " + iteration + " " +
-                        "iterations\n");
+                //System.out.println("Convergence found with " + iteration +
+                // " " +
+                //        "iterations\n");
                 break;
             }
+            //System.out.println();
 
+            //otherwise, continue clustering with new centroids
             centroids = newCentroids;
-            currentClusters = createClusters(data, centroids);
+            currentClusters = cluster(data, centroids);
         }
-
-        System.out.println("Final clusters are: ");
-        for (Map.Entry<Integer, List<IrisData>> entry: currentClusters.entrySet
-                ()) {
-            Integer i = entry.getKey();
-            List<IrisData> clusterList = entry.getValue();
-            Comparator<IrisData> compare = (i1, i2) -> i1.irisClass.compareTo
-                    (i2.irisClass);
-            clusterList.sort(compare); //sorts clusters for easier reading
-            System.out.println(i + ", size: " + clusterList.size());
-            System.out.println(clusterList + "\n");
-        }
+        System.out.println("Iterations: " + iteration);
+        return currentClusters;
     }
 
-    // assign each data point to a cluster by calculating distances
-    private static HashMap<Integer, List<IrisData>> createClusters
-                            (List<IrisData> data, List<IrisData> centroids) {
+    /**
+     * Given a list of data, and the centroids, assign the data to the
+     * closest centroid by calculating their distances.
+     * @param data  List of IrisData objects
+     * @param centroids List of IrisData objects
+     * @return HashMap of clusters
+     */
+    private static HashMap<Integer, List<IrisData>> cluster (List<IrisData>
+                                      data, List<IrisData> centroids) {
         HashMap<Integer, List<IrisData>> clusters = new HashMap<>();
         List<IrisData> cluster1 = new ArrayList<>();
         List<IrisData> cluster2 = new ArrayList<>();
@@ -172,8 +127,6 @@ public class SequentialKMeans {
             List<Double> distances = new ArrayList<>();
             for (IrisData c: centroids) {
                 distances.add(getDistance(i, c));
-                //System.out.println("Distance for " + i + " and centroid " +
-                // c + getDistance(i, c));
             }
             //get smallest distance and assign datapoint to nearest cluster
             int minIndex = distances.indexOf(Collections.min(distances));
@@ -182,7 +135,34 @@ public class SequentialKMeans {
         return clusters;
     }
 
-    //calculate Euclidean norm to find distance between centroid and data point
+    /**
+     * From each cluster, calculate a new centroid by finding the average of
+     * its attributes.
+     * @param currentClusters HashMap of current clusters of an iteration
+     * @return list of new IrisData objects
+     */
+    private static List<IrisData> getNewCentroids(HashMap<Integer,
+            List<IrisData>> currentClusters) {
+        List<IrisData> newCentroids = new ArrayList<>();
+
+        for (Map.Entry<Integer, List<IrisData>> entry: currentClusters.entrySet
+                ()) {
+            Integer i = entry.getKey(); //cluster number
+            List<IrisData> clusterList = entry.getValue();  //cluster
+            IrisData clusterAvg = getClusterAverage(clusterList);
+            newCentroids.add(clusterAvg);
+            //System.out.println("\t\t" + i + ": " + clusterAvg);
+        }
+        //System.out.println();
+        return newCentroids;
+    }
+
+    /**
+     * Calculates the Euclidean norm to find distance between two data points.
+     * @param datum1    one IrisData object
+     * @param datum2    another IrisData object
+     * @return a Double that is the distance
+     */
     private static double getDistance(IrisData datum1, IrisData datum2) {
         double w = Math.pow((datum1.sepialLength - datum2.sepialLength), 2);
         double x = Math.pow((datum1.sepialWidth - datum2.sepialWidth), 2);
@@ -191,14 +171,12 @@ public class SequentialKMeans {
         return Math.sqrt(w+x+y+z);
     }
 
-    private static double getDistance2(IrisData datum1, IrisData datum2) {
-        double y = Math.pow((datum1.petalLength - datum2.petalLength), 2);
-        double z = Math.pow((datum1.petalWidth - datum2.petalWidth), 2);
-        return Math.sqrt(y+z);
-    }
-
-    // find the new centroid in a cluster by finding the average
-    private static IrisData getCentroidAverage(List<IrisData> cluster) {
+    /**
+     * Given a cluster, generate a new centroid by calculating the average.
+     * @param cluster a List of IrisData objects
+     * @return a new IrisData object
+     */
+    private static IrisData getClusterAverage(List<IrisData> cluster) {
         int clusterSize = cluster.size();
         Double sepialLengthAvg = 0.0,
                 sepialWidthAvg = 0.0,
@@ -225,19 +203,17 @@ public class SequentialKMeans {
                 petalWidthAvg);
     }
 
-    // ignore this, add in writeup
-    private static void checkClusterPopulation(HashMap<Integer,
-            List<IrisData>> clusters) {
-        System.out.println("size of cluster 1" + clusters.get(1).size());
-        System.out.println("size of cluster 2" + clusters.get(2).size());
-        System.out.println("size of cluster 3" + clusters.get(3).size());
-    }
-
-    // check the difference between a and a-prime, b and b-prime, c and c-prime
-    private static boolean checkConvergence(List<IrisData>
-                                                    oldCentroids,
+    /**
+     * Given two lists of IrisData objects, check to see if their differences
+     * are significant by looking at the distance between a and a', b and b',
+     * c and c'
+     * @param oldCentroids list of IrisData objects
+     * @param newCentroids list of IrisData objects
+     * @return True if difference is lower than threshold, False otherwise
+     */
+    private static boolean checkConvergence(List<IrisData> oldCentroids,
                                             List<IrisData> newCentroids) {
-        Double threshold = 0.01;
+        Double threshold = 0.01; //difference allowed
         Double delta = 0.0;
         Iterator oldIt = oldCentroids.iterator();
         Iterator newIt = newCentroids.iterator();
@@ -245,8 +221,57 @@ public class SequentialKMeans {
             IrisData oldCentroid = (IrisData)oldIt.next();
             IrisData newCentroid = (IrisData)newIt.next();
             delta += getDistance(oldCentroid, newCentroid);
-            System.out.println("delta: " + delta);
         }
-        return (delta/3) < threshold;
+        return delta < threshold;
     }
+
+    /**
+     * Prints the count of each class per cluster.
+     * @param data HashMap of clusters
+     */
+    public static void printClusterStats(HashMap<Integer, List<IrisData>>
+                                                 data) {
+        for (Map.Entry<Integer, List<IrisData>> entry: data.entrySet()) {
+            Integer i = entry.getKey();
+            List<IrisData> clusterList = entry.getValue();
+            int setosa = 0, versicolor = 0, virginica = 0;
+            for (IrisData dat: clusterList) {
+                if (dat.irisClass.contains("setosa"))
+                    setosa++;
+                else if (dat.irisClass.contains("virginica"))
+                    virginica++;
+                else
+                    versicolor++;
+            }
+            System.out.println("Cluster " + i + ": " + setosa + " setosa, " +
+                versicolor + " versicolor, " + virginica + " virginica");
+        }
+    }
+
+    public static void main(String[] args) {
+        //read data into list
+        String file = "src/iris-data.csv";
+        int numberCentroids = 3;
+        List<IrisData> data = readFromFile(file);
+
+        //pick data points to be the centroids
+        List<IrisData> centroids = chooseCentroids(data, numberCentroids);
+        //System.out.println("Picked three centroids: ");
+        /*for (IrisData d: centroids) {
+            System.out.println(d);
+        }
+        System.out.println();*/
+
+        //cluster the data around the centroids and repeat until convergence
+        Long startTime = System.currentTimeMillis();
+        HashMap<Integer, List<IrisData>> finalClusters = runKMeans
+                (data, centroids);
+        Long endTime = System.currentTimeMillis();
+        System.out.println("Time until convergence: " + (endTime-startTime)
+                + "ms");
+
+        printClusterStats(finalClusters);
+
+    }
+
 }
