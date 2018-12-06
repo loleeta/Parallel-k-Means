@@ -3,6 +3,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 
+/**
+ * K-means clustering of Iris dataset from UCI
+ * https://archive.ics.uci.edu/ml/datasets/iris
+ */
 public class SequentialKMeans {
     /**
      * Takes a file name and reads in corresponding CSV data, creates
@@ -86,7 +90,7 @@ public class SequentialKMeans {
             //System.out.println("\tChecking convergence");
             //System.out.println("\t\tOld: " + centroids);
             //System.out.println("\t\tNew: " + newCentroids + "\n");
-            convergence = checkConvergence(centroids, newCentroids);
+            convergence = isConverged(centroids, newCentroids);
 
             //if converged, clustering is complete
             if (convergence) {
@@ -115,12 +119,10 @@ public class SequentialKMeans {
     private static HashMap<Integer, List<IrisData>> cluster (List<IrisData>
                                       data, List<IrisData> centroids) {
         HashMap<Integer, List<IrisData>> clusters = new HashMap<>();
-        List<IrisData> cluster1 = new ArrayList<>();
-        List<IrisData> cluster2 = new ArrayList<>();
-        List<IrisData> cluster3 = new ArrayList<>();
-        clusters.put(1, cluster1);
-        clusters.put(2, cluster2);
-        clusters.put(3, cluster3);
+        for (int i = 1; i <= centroids.size(); i++) {
+            clusters.put(i, new ArrayList<IrisData>());
+        }
+
         //for each data point, find the distance for all centroids. It
         // belongs in the cluster it has the smallest distance to.
         for (IrisData i: data) {
@@ -211,7 +213,7 @@ public class SequentialKMeans {
      * @param newCentroids list of IrisData objects
      * @return True if difference is lower than threshold, False otherwise
      */
-    private static boolean checkConvergence(List<IrisData> oldCentroids,
+    private static boolean isConverged(List<IrisData> oldCentroids,
                                             List<IrisData> newCentroids) {
         Double threshold = 0.01; //difference allowed
         Double delta = 0.0;
@@ -271,7 +273,6 @@ public class SequentialKMeans {
                 + "ms");
 
         printClusterStats(finalClusters);
-
     }
 
 }
